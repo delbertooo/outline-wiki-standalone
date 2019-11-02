@@ -1,0 +1,68 @@
+version: "3"
+
+
+volumes:
+  s3_data:
+  postgres_data:
+  redis_data:
+
+services:
+  outline:
+    image: outlinewiki/outline:version-0.37.0
+    ports:
+      - ${APP_PORT}:3000
+    depends_on:
+      - s3fake
+      - redis
+      - postgres
+    environment:
+      - DATABASE_URL=postgres://outlinewiki:not.very.secure@postgres:5432/outlinewiki
+      - REDIS_URL=redis://redis:6379
+      - URL=http://localhost:${APP_PORT}
+
+      - PORT=3000
+      - FORCE_HTTPS=false
+      - DEPLOYMENT=self
+      - ENABLE_UPDATES=true
+      - SUBDOMAINS_ENABLED=false
+      - WEBSOCKETS_ENABLED=true
+      - DEBUG=cache,presenters,events
+
+      - AWS_ACCESS_KEY_ID=get_a_key_from_aws
+      - AWS_SECRET_ACCESS_KEY=get_the_secret_of_above_key
+      - AWS_REGION=xx-xxxx-x
+      #- AWS_S3_UPLOAD_BUCKET_URL=http://s3fake:4569
+      - AWS_S3_UPLOAD_BUCKET_URL=http://localhost:${APP_S3_PORT}
+      - AWS_S3_UPLOAD_BUCKET_NAME=outlinewiki
+      - AWS_S3_UPLOAD_MAX_SIZE=26214400
+
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - GOOGLE_ALLOWED_DOMAINS
+      - SLACK_KEY
+      - SLACK_SECRET
+      - SLACK_APP_ID
+      - SLACK_VERIFICATION_TOKEN
+      - SECRET_KEY
+
+  
+  s3fake:
+    image: lphoward/fake-s3:latest
+    volumes:
+      - s3_data:/fakes3_root
+    ports:
+      - ${APP_S3_PORT}:4569
+
+  postgres:
+    image: postgres:12
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=outlinewiki
+      - POSTGRES_PASSWORD=not.very.secure
+      - POSTGRES_DB=outlinewiki
+
+  redis:
+    image: redis:5
+    volumes:
+      - redis_data:/data
